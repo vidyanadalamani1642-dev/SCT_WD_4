@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>To-Do App Filter</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 0;
+            background: linear-gradient(120deg, #4facfe, #00f2fe);
+            color: white;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 40px auto;
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        input, button {
+            width: 90%;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            border: none;
+        }
+
+        button {
+            background: #222;
+            color: white;
+            cursor: pointer;
+        }
+
+        ul {
+            padding: 0;
+        }
+
+        li {
+            list-style: none;
+            background: rgba(255,255,255,0.2);
+            margin: 8px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .done {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .filter-buttons button {
+            width: 28%;
+            margin: 3px 1%;
+        }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="container" id="loginPage">
+    <h2>Login / Register</h2>
+    <input id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <button onclick="register()">Register</button>
+</div>
+
+<!-- APP -->
+<div class="container hidden" id="appPage">
+    <h2>My To-Do List</h2>
+
+    <input id="taskInput" placeholder="New Task">
+    <input type="datetime-local" id="taskTime">
+    <button onclick="addTask()">Add Task</button>
+
+    <div class="filter-buttons">
+        <button onclick="showAll()">All</button>
+        <button onclick="showPending()">Pending</button>
+        <button onclick="showCompleted()">Completed</button>
+    </div>
+
+    <ul id="taskList"></ul>
+
+    <button onclick="logout()">Logout</button>
+</div>
+
+<script>
+let currentUser = null;
+let tasks = [];
+let filter = "all"; // all, pending, completed
+
+// USERS
+function getUsers() { return JSON.parse(localStorage.getItem("users") || "{}"); }
+function saveUsers(users) { localStorage.setItem("users", JSON.stringify(users)); }
+
+// REGISTER
+function register() {
+    let users = getUsers();
+    if (users[username.value]) { alert("User exists"); return; }
+    users[username.value] = password.value;
+    saveUsers(users);
+    alert("Registered successfully!");
+}
+
+// LOGIN
+function login() {
+    let users = getUsers();
+    if (users[username.value] === password.value) {
+        currentUser = username.value;
+        localStorage.setItem("currentUser", currentUser);
+        loadApp();
+    } else alert("Invalid login");
+}
+
+// LOGOUT
+function logout() { localStorage.removeItem("currentUser"); location.reload(); }
+
+// TASKS
+function loadTasks() {
+    tasks = JSON.parse(localStorage.getItem(currentUser + "_tasks") || "[]");
+    render();
+}
+function saveTasks() { localStorage.setItem(currentUser + "_tasks", JSON.stringify(tasks)); }
+
+// ADD
+function addTask() {
+    if (!taskInput.value) return;
+    tasks.push({ text: taskInput.value, time: taskTime.value, done: false });
+    taskInput.value = ""; taskTime.value = "";
+    render();
+}
+
+// TOGGLE
+function toggle(i) { tasks[i].done = !tasks[i].done; render(); }
+
+// DELETE
+function deleteTask(i) { tasks.splice(i, 1); render(); }
+
+// EDIT
+function editTask(i) { let newText = prompt("Edit task", tasks[i].text); if(newText){tasks[i].text=newText; render();} }
+
+// RENDER WITH FILTER
+function render() {
+    taskList.innerHTML = "";
+    tasks.forEach((t,i) => {
+        if(filter === "pending" && t.done) return;
+        if(filter === "completed" && !t.done) return;
+
+        let li = document.createElement("li");
+        li.innerHTML = `
+            <span class="${t.done?'done':''}">${t.text}<br><small>${t.time||""}</small></span><br>
+            <button onclick="toggle(${i})">✔</button>
+            <button onclick="editTask(${i})">✏</button>
+            <button onclick="deleteTask(${i})">❌</button>
+        `;
+        taskList.appendChild(li);
+    });
+    saveTasks();
+}
+
+// FILTER BUTTONS
+function showAll() { filter="all"; render(); }
+function showPending() { filter="pending"; render(); }
+function showCompleted() { filter="completed"; render(); }
+
+// LOAD APP
+function loadApp() { loginPage.classList.add("hidden"); appPage.classList.remove("hidden"); loadTasks(); }
+
+// AUTO LOGIN
+window.onload = function() {
+    let savedUser = localStorage.getItem("currentUser");
+    if(savedUser){ currentUser = savedUser; loadApp(); }
+};
+</script>
+
+</body>
+</html>
